@@ -47,7 +47,6 @@ export async function findByTypeAndEmployeeId(
     `SELECT * FROM cards WHERE type=$1 AND "employeeId"=$2`,
     [type, employeeId]
   );
-
   return result.rows[0];
 }
 
