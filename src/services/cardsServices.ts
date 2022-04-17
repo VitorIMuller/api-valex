@@ -1,9 +1,12 @@
 import * as companyRepository from "../repositories/companyRepository.js"
 import * as employeeRepository from "../repositories/employeeRepository.js"
 import * as cardRepository from "../repositories/cardRepository.js"
+import * as paymentRepository from "../repositories/paymentRepository.js"
+
 import { faker } from "@faker-js/faker"
 import { default as dayjs } from "dayjs"
 import * as bcrypt from "bcrypt"
+import { func } from "joi"
 
 export async function createCard(headers: string, employeeId: number, cardType: cardRepository.TransactionTypes) {
     const apiKey = await companyRepository.findByApiKey(headers)
@@ -23,6 +26,11 @@ export async function createCard(headers: string, employeeId: number, cardType: 
 
     await cardRepository.insert(cardData);
 
+}
+
+export async function findCardById(cardId: number) {
+    const card = await cardRepository.findById(cardId)
+    if (!card) return null
 }
 
 export async function createCardInfos(employeeId: number, employeeFullName: string, cardType: cardRepository.TransactionTypes) {
@@ -65,9 +73,81 @@ function generateDateExpiration() {
     return dayjs(Date.now()).add(5, "year").format('MM/YYYY')
 }
 
-async function createHashCode(securityCode: string) {
-    const hash = bcrypt.hashSync(securityCode, 10)
+async function createHashCode(sensibleData: string) {
+    const hash = bcrypt.hashSync(sensibleData, 10)
 
     return hash
 
 }
+
+export async function activateCard(idCard: number, CVC: string, password: string) {
+
+    const findCard = await cardRepository.findById(idCard);
+    console.log(findCard)
+    if (!findCard) return null
+
+    const checkExpired = isExpired(findCard.expirationDate)
+    if (checkExpired === false) return null;
+
+    if (findCard.password != null) return null
+
+    const checkCVC = compareHashData(CVC, findCard.securityCode)
+    if (!checkCVC) return null
+
+
+    const checkPasswordNumbers = isNaN(parseInt(password)) && password.length != 4
+    if (!checkPasswordNumbers) return null
+
+    findCard.password = await createHashCode(password)
+
+    //UPDATE PASSWORD
+    await cardRepository.update(idCard, findCard)
+
+
+}
+
+function isExpired(date: string): boolean {
+    const dateFormat = date.split("/")
+
+    const isExpired = dayjs(`${dateFormat[0]}/31/${dateFormat[1]}`).isBefore(dayjs(Date.now()))
+
+    return isExpired
+}
+
+function compareHashData(sensibleData: string, hash: string): boolean {
+
+    const result = bcrypt.compareSync(sensibleData, hash)
+
+    return result
+}
+
+export async function getHistoric(idCard: number) {
+    const transaction = await paymentRepository.findByCardId(idCard);
+    const recharges = await paymentRepository.findByCardId(idCard)
+
+
+    const totalTransactions: any = sumValues(transaction, "amounth")
+    const totalRecharge: any = sumValues(recharges, "amounth")
+
+    const balance: number = totalRecharge - totalTransactions;
+    return {
+        balance,
+        transaction,
+        recharges
+    }
+}
+function sumValues(array: any[], key: string): number {
+
+    const keyValues: any[] = array.map(el => el[key])
+
+    return keyValues.reduce((current: number, sum: number) => sum + current, 0);
+
+}
+
+
+
+
+
+
+
+

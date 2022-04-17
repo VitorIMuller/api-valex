@@ -2,14 +2,33 @@ import { Request, Response } from "express";
 import * as cardsServices from "../services/cardsServices.js";
 
 export async function createCard(req: Request, res: Response) {
-    //colocar um schema
-    const types = ['groceries', 'restaurants', 'transport', 'education', 'health'];
-    if (!req.body.id || !req.body.type || !req.headers.authorization) return res.sendStatus(404);
-    if (!types.find(type => type === req.body.type)) return res.sendStatus(401);
-
-    const sucess = await cardsServices.createCard(req.headers.authorization, req.body.id, req.body.type)
+    const key = req.headers['x-api-key']
+    const apiKey = key as string;
+    const sucess = await cardsServices.createCard(apiKey, req.body.id, req.body.type)
     if (sucess === null) return res.sendStatus(401);
 
     res.sendStatus(201)
 
+}
+
+export async function activateCard(req: Request, res: Response) {
+    const id = req.params.id
+    const { CVC, password } = req.body
+    const idCard = parseInt(id)
+
+    const update = await cardsServices.activateCard(idCard, CVC, password)
+    if (update === null) res.sendStatus(501)
+    res.sendStatus(204)
+
+}
+
+export async function getTransactionsRechargesAndAmounth(req: Request, res: Response) {
+    const { id } = req.params
+
+    const verifyCardExistence = await cardsServices.findCardById(parseInt(id))
+    if (verifyCardExistence === null) res.sendStatus(400)
+
+    const historic = await cardsServices.getHistoric(parseInt(id))
+
+    res.send(historic)
 }
