@@ -195,7 +195,7 @@ function isExpired(date: string): boolean {
     return isExpired
 }
 
-function compareHashData(sensibleData: string, hash: string): boolean {
+export default function compareHashData(sensibleData: string, hash: string): boolean {
 
     const result = bcrypt.compareSync(sensibleData, hash)
 

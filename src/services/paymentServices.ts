@@ -2,8 +2,7 @@ import * as paymentRepository from "../repositories/paymentRepository.js"
 import * as cardsRepositories from "../repositories/cardRepository.js"
 import * as businessRepository from "../repositories/businessRepository.js"
 import { default as dayjs } from "dayjs"
-import * as bcrypt from "bcrypt"
-import { getHistoric } from "./cardsServices.js"
+import compareHashData, { getHistoric } from "./cardsServices.js"
 
 
 export async function posPayment(id: number, password: string, businessId: number, amount: number) {
@@ -21,16 +20,14 @@ export async function posPayment(id: number, password: string, businessId: numbe
         }
     }
     console.log(findCard)
-    const verifyExpiration = isExpired(findCard.expirationDate)
-    console.log(verifyExpiration)
-    if (verifyExpiration) {
+
+    if (isExpired(findCard.expirationDate)) {
         throw {
-            type: "Unauthorized"
+            type: "Not_Found"
         }
     };
 
-    const verifyPassword = compareHashData(password, findCard.password)
-    if (verifyPassword === false) {
+    if (!compareHashData(password, findCard.password)) {
         throw {
             type: "Unauthorized",
             message: "Incorrect password"
@@ -38,12 +35,25 @@ export async function posPayment(id: number, password: string, businessId: numbe
     }
 
     const verifyBusiness = await businessRepository.findById(businessId)
-    if (!verifyBusiness) return null
+    if (!verifyBusiness) {
+        throw {
+            type: "Not_Found"
+        }
+    };
 
-    if (findCard.type !== verifyBusiness.type) return null
+    if (findCard.type !== verifyBusiness.type) {
+        throw {
+            type: "Not_Found"
+        }
+    };
 
     const amountCard = await getHistoric(id)
-    if (amount > amountCard.balance) return null
+    if (amount > amountCard.balance) {
+        throw {
+            type: "Unauthorized",
+            message: "insufficient funds"
+        }
+    };
 
     await paymentRepository.insert({ cardId: findCard.id, businessId, amount })
 
@@ -58,10 +68,5 @@ function isExpired(date: string): boolean {
     return isExpired
 }
 
-function compareHashData(sensibleData: string, hash: string): boolean {
 
-    const result = bcrypt.compareSync(sensibleData, hash)
-
-    return result
-}
 
