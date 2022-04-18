@@ -2,11 +2,11 @@ import * as companyRepository from "../repositories/companyRepository.js"
 import * as employeeRepository from "../repositories/employeeRepository.js"
 import * as cardRepository from "../repositories/cardRepository.js"
 import * as paymentRepository from "../repositories/paymentRepository.js"
+import * as rechargeRepository from "../repositories/rechargeRepository.js"
 
 import { faker } from "@faker-js/faker"
 import { default as dayjs } from "dayjs"
 import * as bcrypt from "bcrypt"
-import { func } from "joi"
 
 export async function createCard(headers: string, employeeId: number, cardType: cardRepository.TransactionTypes) {
     const apiKey = await companyRepository.findByApiKey(headers)
@@ -25,6 +25,26 @@ export async function createCard(headers: string, employeeId: number, cardType: 
     cardData.securityCode = await createHashCode(cardData.securityCode)
 
     await cardRepository.insert(cardData);
+
+}
+
+export async function rechargeCard(apiKey: string, cardId: number, value: number) {
+
+    const findApiKey = await companyRepository.findByApiKey(apiKey)
+    if (!findApiKey) return null;
+
+    const card = await findCardById(cardId)
+    if (!card) return null
+
+    const checkExpired = isExpired(card.expirationDate)
+    if (checkExpired === false) return null;
+
+    if (value <= 0) return null;
+
+    const rechargeData = { cardId, amount: value }
+
+    await rechargeRepository.insert(rechargeData)
+
 
 }
 

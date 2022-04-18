@@ -11,6 +11,17 @@ export async function createCard(req: Request, res: Response) {
 
 }
 
+export async function recharge(req: Request, res: Response) {
+    const idCard = req.params.id
+    const key = req.headers['x-api-key']
+    const apiKey = key as string;
+    const { value } = req.body
+
+    await cardsServices.rechargeCard(apiKey, parseInt(idCard), value)
+
+    res.sendStatus(200)
+}
+
 export async function activateCard(req: Request, res: Response) {
     const id = req.params.id
     const { CVC, password } = req.body
