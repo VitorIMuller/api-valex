@@ -1,10 +1,10 @@
 import joi from "joi"
 
 const posPurchaseSchema = joi.object({
-    cardId: joi.number().required(),
+    id: joi.number().required(),
     password: joi.string().required(),
     idBusiness: joi.number().required(),
-    amounth: joi.number().required()
+    amount: joi.number().required()
 })
 
 

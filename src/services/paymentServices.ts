@@ -6,24 +6,43 @@ import * as bcrypt from "bcrypt"
 import { getHistoric } from "./cardsServices.js"
 
 
-export async function posPayment(cardId: number, password: string, businessId: number, amount: number) {
-    if (amount <= 0) return null
+export async function posPayment(id: number, password: string, businessId: number, amount: number) {
+    if (amount <= 0) {
+        throw {
+            type: "Unauthorized",
+            message: "amount negative"
+        }
+    }
 
-    const findCard = await cardsRepositories.findById(cardId)
-    if (!findCard) return null
-
+    const findCard = await cardsRepositories.findById(id)
+    if (!findCard) {
+        throw {
+            type: "Unauthorized"
+        }
+    }
+    console.log(findCard)
     const verifyExpiration = isExpired(findCard.expirationDate)
-    if (verifyExpiration === false) return null
+    console.log(verifyExpiration)
+    if (verifyExpiration) {
+        throw {
+            type: "Unauthorized"
+        }
+    };
 
     const verifyPassword = compareHashData(password, findCard.password)
-    if (verifyPassword === false) return null
+    if (verifyPassword === false) {
+        throw {
+            type: "Unauthorized",
+            message: "Incorrect password"
+        }
+    }
 
     const verifyBusiness = await businessRepository.findById(businessId)
     if (!verifyBusiness) return null
 
     if (findCard.type !== verifyBusiness.type) return null
 
-    const amountCard = await getHistoric(cardId)
+    const amountCard = await getHistoric(id)
     if (amount > amountCard.balance) return null
 
     await paymentRepository.insert({ cardId: findCard.id, businessId, amount })

@@ -10,13 +10,27 @@ import * as bcrypt from "bcrypt"
 
 export async function createCard(headers: string, employeeId: number, cardType: cardRepository.TransactionTypes) {
     const apiKey = await companyRepository.findByApiKey(headers)
-    if (!apiKey) return null;
+    if (!apiKey) {
+        throw {
+            type: "Bad_Request",
+            message: "missing API Key at Headers Config"
+        }
+
+    };
 
     const verifyIdEmployee = await employeeRepository.findById(employeeId)
-    if (!verifyIdEmployee) return null;
+    if (!verifyIdEmployee) {
+        throw {
+            type: "Not_Found"
+        }
+    };
 
     const verifyCardUser = await cardRepository.findByTypeAndEmployeeId(cardType, employeeId)
-    if (verifyCardUser) return null;
+    if (verifyCardUser) {
+        throw {
+            type: "Conflict"
+        }
+    };
 
     const employee = verifyIdEmployee
 
@@ -31,15 +45,38 @@ export async function createCard(headers: string, employeeId: number, cardType: 
 export async function rechargeCard(apiKey: string, cardId: number, value: number) {
 
     const findApiKey = await companyRepository.findByApiKey(apiKey)
-    if (!findApiKey) return null;
+    if (!findApiKey) {
+        throw {
+            type: "Bad_Request",
+            message: "missing API Key at Headers Config"
+        }
+
+    };
 
     const card = await findCardById(cardId)
-    if (!card) return null
+    if (!card) {
+        throw {
+            type: "Not_Found"
+        }
+
+    };
 
     const checkExpired = isExpired(card.expirationDate)
-    if (checkExpired === false) return null;
+    if (checkExpired === true) {
+        throw {
+            type: "Unauthorized",
+            message: "Card Has Expired"
+        }
 
-    if (value <= 0) return null;
+    };
+
+    if (value <= 0) {
+        throw {
+            type: "Unauthorized",
+            message: "Value negative"
+        }
+
+    };
 
     const rechargeData = { cardId, amount: value }
 
@@ -51,6 +88,8 @@ export async function rechargeCard(apiKey: string, cardId: number, value: number
 export async function findCardById(cardId: number) {
     const card = await cardRepository.findById(cardId)
     if (!card) return null
+
+    return card
 }
 
 export async function createCardInfos(employeeId: number, employeeFullName: string, cardType: cardRepository.TransactionTypes) {
@@ -104,19 +143,41 @@ export async function activateCard(idCard: number, CVC: string, password: string
 
     const findCard = await cardRepository.findById(idCard);
     console.log(findCard)
-    if (!findCard) return null
+    if (!findCard) {
+        throw {
+            type: "Bad_Request"
+        }
+    }
 
     const checkExpired = isExpired(findCard.expirationDate)
-    if (checkExpired === false) return null;
+    if (checkExpired === true) {
+        throw {
+            type: "Bad_Request",
+            message: "card has expirated"
+        }
+    }
 
-    if (findCard.password != null) return null
+    if (findCard.password) {
+        throw {
+            type: "Conflict",
+            message: "Card is Already Activated"
+        }
+    }
 
     const checkCVC = compareHashData(CVC, findCard.securityCode)
-    if (!checkCVC) return null
+    if (!checkCVC) {
+        throw {
+            type: "Unauthorized"
+        }
+    }
 
 
     const checkPasswordNumbers = isNaN(parseInt(password)) && password.length != 4
-    if (!checkPasswordNumbers) return null
+    if (!checkPasswordNumbers) {
+        throw {
+            type: "Unauthorized"
+        }
+    }
 
     findCard.password = await createHashCode(password)
 
@@ -124,6 +185,7 @@ export async function activateCard(idCard: number, CVC: string, password: string
 
 
 }
+
 
 function isExpired(date: string): boolean {
     const dateFormat = date.split("/")
@@ -142,11 +204,11 @@ function compareHashData(sensibleData: string, hash: string): boolean {
 
 export async function getHistoric(idCard: number) {
     const transaction = await paymentRepository.findByCardId(idCard);
-    const recharges = await paymentRepository.findByCardId(idCard)
+    const recharges = await rechargeRepository.findByCardId(idCard)
 
 
-    const totalTransactions: any = sumValues(transaction, "amounth")
-    const totalRecharge: any = sumValues(recharges, "amounth")
+    const totalTransactions = sumValues(transaction, "amount")
+    const totalRecharge = sumValues(recharges, "amount")
 
     const balance: number = totalRecharge - totalTransactions;
     return {
