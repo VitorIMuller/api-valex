@@ -19,7 +19,6 @@ export async function posPayment(id: number, password: string, businessId: numbe
             type: "Unauthorized"
         }
     }
-    console.log(findCard)
 
     if (isExpired(findCard.expirationDate)) {
         throw {
@@ -67,6 +66,3 @@ function isExpired(date: string): boolean {
 
     return isExpired
 }
-
-
-

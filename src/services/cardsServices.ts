@@ -132,7 +132,7 @@ function generateDateExpiration() {
     return dayjs(Date.now()).add(5, "year").format('MM/YYYY')
 }
 
-async function createHashCode(sensibleData: string) {
+function createHashCode(sensibleData: string) {
     const hash = bcrypt.hashSync(sensibleData, 10)
 
     return hash
@@ -142,7 +142,6 @@ async function createHashCode(sensibleData: string) {
 export async function activateCard(idCard: number, CVC: string, password: string) {
 
     const findCard = await cardRepository.findById(idCard);
-    console.log(findCard)
     if (!findCard) {
         throw {
             type: "Bad_Request"
@@ -172,14 +171,7 @@ export async function activateCard(idCard: number, CVC: string, password: string
     }
 
 
-    const checkPasswordNumbers = isNaN(parseInt(password)) && password.length != 4
-    if (!checkPasswordNumbers) {
-        throw {
-            type: "Unauthorized"
-        }
-    }
-
-    findCard.password = await createHashCode(password)
+    findCard.password = createHashCode(password)
 
     await cardRepository.update(idCard, findCard)
 
