@@ -5,7 +5,6 @@ export async function createCard(req: Request, res: Response) {
     const key = req.headers['x-api-key']
     const apiKey = key as string;
     const sucess = await cardsServices.createCard(apiKey, req.body.id, req.body.type)
-    if (sucess === null) return res.sendStatus(401);
 
     res.sendStatus(201)
 

@@ -120,7 +120,6 @@ export async function activateCard(idCard: number, CVC: string, password: string
 
     findCard.password = await createHashCode(password)
 
-    //UPDATE PASSWORD
     await cardRepository.update(idCard, findCard)
 
 
